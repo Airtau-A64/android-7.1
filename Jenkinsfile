@@ -66,15 +66,15 @@ node('docker && android-build') {
 
             export HOME=$WORKSPACE
             export USER=jenkins
-            echo $GITHUB_TOKEN
+            
             repo manifest -r -o manifest.xml
 
             echo "{\\"message\\":\\"Add $VERSION changes\\", \\"committer\\":{\\"name\\":\\"Airtau\\",\\"email\\":\\"airtau@mail.ru\\"},\\"content\\":\\"$(echo "$CHANGES" | base64 -w 0)\\"}" | \
-              curl -f -X PUT -H "Authorization: token $GITHUB_TOKEN" -d @- \
+              curl -X PUT -H "Authorization: token $GITHUB_TOKEN" -d @- \
               "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO/contents/versions/$VERSION/CHANGES.md"
 
             echo "{\\"message\\":\\"Add $VERSION manifest\\", \\"committer\\":{\\"name\\":\\"Airtau\\",\\"email\\":\\"airtau@mail.ru\\"},\\"content\\":\\"$(base64 -w 0 manifest.xml)\\"}" | \
-              curl -f -X PUT -H "Authorization: token $GITHUB_TOKEN" -d @- \
+              curl -X PUT -H "Authorization: token $GITHUB_TOKEN" -d @- \
               "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO/contents/versions/$VERSION/manifest.xml"
           '''
         }
