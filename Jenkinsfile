@@ -70,11 +70,11 @@ node('docker && android-build') {
             repo manifest -r -o manifest.xml
 
             echo "{\\"message\\":\\"Add $VERSION changes\\", \\"committer\\":{\\"name\\":\\"Jenkins\\",\\"email\\":\\"jenkins@ayufan.eu\\"},\\"content\\":\\"$(echo "$CHANGES" | base64 -w 0)\\"}" | \
-              curl --fail -X PUT -H "Authorization: token $GITHUB_TOKEN" -d @- \
+              curl --fail -X PUT -H "Authorization: token 06eb360b46cece90076823e2f19e4d31cc6928e4" -d @- \
               "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO/contents/versions/$VERSION/CHANGES.md"
 
             echo "{\\"message\\":\\"Add $VERSION manifest\\", \\"committer\\":{\\"name\\":\\"Jenkins\\",\\"email\\":\\"jenkins@ayufan.eu\\"},\\"content\\":\\"$(base64 -w 0 manifest.xml)\\"}" | \
-              curl --fail -X PUT -H "Authorization: token $GITHUB_TOKEN" -d @- \
+              curl --fail -X PUT -H "Authorization: token 06eb360b46cece90076823e2f19e4d31cc6928e4" -d @- \
               "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO/contents/versions/$VERSION/manifest.xml"
           '''
         }
