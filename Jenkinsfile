@@ -6,10 +6,10 @@ properties([
     booleanParam(defaultValue: false, description: 'If build should be marked as pre-release', name: 'PRERELEASE'),
     string(defaultValue: 'ayufan-pine64', description: 'GitHub username or organization', name: 'GITHUB_USER'),
     string(defaultValue: 'android-7.1', description: 'GitHub repository', name: 'GITHUB_REPO'),
+    booleanParam(defaultValue: true, description: 'Select if you want to build Nanopi-A64 version.', name: 'BUILD_NANOPI'),
     booleanParam(defaultValue: true, description: 'Select if you want to build tablet version.', name: 'BUILD_TABLET'),
     booleanParam(defaultValue: true, description: 'Select if you want to build TV version.', name: 'BUILD_TV'),
     booleanParam(defaultValue: true, description: 'Select if you want to build Pinebook version.', name: 'BUILD_PINEBOOK'),
-    booleanParam(defaultValue: true, description: 'Select if you want to build Nanopi-A64 version.', name: 'BUILD_NANOPI'),
   ])
 ])
 */
@@ -34,7 +34,7 @@ node('docker && android-build') {
 
         repo init -u https://android.googlesource.com/platform/manifest -b android-7.1.2_r11 --depth=1
         rm -rf .repo/local_manifests
-        git clone https://github.com/ayufan-pine64/local_manifests -b nougat-7.1 .repo/local_manifests
+        git clone https://github.com/Airtau-A64/local_manifests -b nougat-7.1 .repo/local_manifests
 
         repo sync -j 20 -c --force-sync
         '''
@@ -78,6 +78,49 @@ node('docker && android-build') {
               curl -f -X PUT -H "Authorization: token $GITHUB_TOKEN" -d @- \
               "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO/contents/versions/$VERSION/manifest.xml"
           '''
+        }
+
+        withEnv([
+          "VERSION=$VERSION",
+          'TARGET=tulip_chiphd_nanopi-userdebug',
+          'USE_CCACHE=true',
+          'ANDROID_JACK_VM_ARGS=-Xmx3g -Dfile.encoding=UTF-8 -XX:+TieredCompilation',
+          'ANDROID_NO_TEST_CHECK=true'
+        ]) {
+          stage 'Nanopi'
+          if (params.BUILD_NANOPI) {
+            sh '''#!/bin/bash
+              export CCACHE_DIR=$PWD/ccache
+              export HOME=$WORKSPACE
+              export USER=jenkins
+
+              source build/envsetup.sh
+              lunch "${TARGET}"
+              make installclean
+            '''
+
+            retry(2) {
+              sh '''#!/bin/bash
+                export CCACHE_DIR=$PWD/ccache
+                export HOME=$WORKSPACE
+                export USER=jenkins
+
+                source build/envsetup.sh
+                lunch "${TARGET}"
+                make -j$(($(nproc)+1))
+              '''
+            }
+          }
+
+          stage 'Image Nanopi'
+          if (params.BUILD_NANOPI) {
+            sh '''#!/bin/bash
+              source build/envsetup.sh
+              lunch "${TARGET}"
+              set -xe
+              sdcard_image "${JOB_NAME}-nanopi-v${VERSION}-r${BUILD_NUMBER}.img.gz" nanopi
+            '''
+          }
         }
 
         withEnv([
@@ -206,49 +249,6 @@ node('docker && android-build') {
               lunch "${TARGET}"
               set -xe
               sdcard_image "${JOB_NAME}-tv-v${VERSION}-r${BUILD_NUMBER}.img.gz"
-            '''
-          }
-        }
-
-        withEnv([
-          "VERSION=$VERSION",
-          'TARGET=tulip_chiphd_nanopi-userdebug',
-          'USE_CCACHE=true',
-          'ANDROID_JACK_VM_ARGS=-Xmx3g -Dfile.encoding=UTF-8 -XX:+TieredCompilation',
-          'ANDROID_NO_TEST_CHECK=true'
-        ]) {
-          stage 'Nanopi'
-          if (params.BUILD_NANOPI) {
-            sh '''#!/bin/bash
-              export CCACHE_DIR=$PWD/ccache
-              export HOME=$WORKSPACE
-              export USER=jenkins
-
-              source build/envsetup.sh
-              lunch "${TARGET}"
-              make installclean
-            '''
-
-            retry(2) {
-              sh '''#!/bin/bash
-                export CCACHE_DIR=$PWD/ccache
-                export HOME=$WORKSPACE
-                export USER=jenkins
-
-                source build/envsetup.sh
-                lunch "${TARGET}"
-                make -j$(($(nproc)+1))
-              '''
-            }
-          }
-
-          stage 'Image Nanopi'
-          if (params.BUILD_NANOPI) {
-            sh '''#!/bin/bash
-              source build/envsetup.sh
-              lunch "${TARGET}"
-              set -xe
-              sdcard_image "${JOB_NAME}-nanopi-v${VERSION}-r${BUILD_NUMBER}.img.gz" nanopi
             '''
           }
         }
